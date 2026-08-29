@@ -4,7 +4,6 @@ RUN apk add --no-cache tailscale ca-certificates
 
 RUN cat <<'EOF' > /start.sh
 #!/bin/sh
-set -e
 
 mkdir -p /var/lib/tailscale
 
@@ -17,7 +16,12 @@ until tailscale status >/dev/null 2>&1; do
   sleep 0.5
 done
 
-tailscale up --authkey="${TS_AUTHKEY}" --hostname="${TS_HOSTNAME:-render-node}" --accept-dns=false
+if [ -z "$TS_AUTHKEY" ]; then
+  echo "WARNING: TS_AUTHKEY is not set — skipping tailscale up"
+else
+  tailscale up --authkey="${TS_AUTHKEY}" --hostname="${TS_HOSTNAME:-render-node}" --accept-dns=false || \
+    echo "WARNING: tailscale up failed, check TS_AUTHKEY validity"
+fi
 
 PORT="${PORT:-8080}"
 while true; do
