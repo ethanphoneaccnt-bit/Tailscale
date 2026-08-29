@@ -16,6 +16,7 @@ mkdir -p /var/lib/tailscale
 
 tailscaled --state=/var/lib/tailscale/tailscaled.state \
   --tun=userspace-networking \
+  --advertise-exit-node \
   --socks5-server=localhost:1055 \
   --outbound-http-proxy-listen=localhost:1055 &
 
