@@ -1,13 +1,31 @@
-FROM tailscale/tailscale:stable
+FROM alpine:3.20
 
-# Open the standard universal web port for Render
-EXPOSE 80
+RUN apk add --no-cache tailscale ca-certificates
 
-# Force the container to run a shell command string on startup
-ENTRYPOINT ["/bin/sh", "-c"]
+RUN cat <<'EOF' > /start.sh
+#!/bin/sh
+set -e
 
-# 1. Create the 'Welcome to Japan' webpage
-# 2. Launch the Python server on standard port 80 (using root privileges)
-# 3. Initialize Tailscale daemon in userspace mode
-# 4. Authenticate your account and turn on the VPN exit node flag
-CMD ["echo '<h1>Welcome to Japan</h1>' > index.html && python3 -m http.server 80 & tailscaled --tun=userspace-networking --state=/var/lib/tailscale/tailscaled.state --socket=/var/run/tailscale/tailscaled.sock & sleep 2 && tailscale up --authkey=${TAILSCALE_AUTHKEY} --advertise-exit-node"]
+mkdir -p /var/lib/tailscale
+
+tailscaled --state=/var/lib/tailscale/tailscaled.state \
+  --tun=userspace-networking \
+  --socks5-server=localhost:1055 \
+  --outbound-http-proxy-listen=localhost:1055 &
+
+until tailscale status >/dev/null 2>&1; do
+  sleep 0.5
+done
+
+tailscale up --authkey="${TS_AUTHKEY}" --hostname="${TS_HOSTNAME:-render-node}" --accept-dns=false
+
+PORT="${PORT:-8080}"
+while true; do
+  { printf 'HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK'; } | nc -l -p "$PORT" -q 1
+done
+EOF
+
+RUN chmod +x /start.sh
+
+EXPOSE 8080
+ENTRYPOINT ["/start.sh"]
