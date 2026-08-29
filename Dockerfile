@@ -8,7 +8,8 @@ RUN cat <<'EOF' > /start.sh
 PORT="${PORT:-8080}"
 
 ( while true; do
-    { printf 'HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK'; } | nc -l -p "$PORT" -q 1
+    { printf 'HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK'; } | nc -l -p "$PORT"
+    sleep 0.2
   done ) &
 
 mkdir -p /var/lib/tailscale
